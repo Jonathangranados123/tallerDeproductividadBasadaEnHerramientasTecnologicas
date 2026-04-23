@@ -1,0 +1,10 @@
+language: java
+
+jdk:
+  - openjdk17
+
+install:
+  - mvn install -DskipTests=true -B -V
+
+script:
+  - mvn test
