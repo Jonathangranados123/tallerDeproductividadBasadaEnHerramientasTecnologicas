@@ -14,4 +14,7 @@ class InventarioApplicationTests {
 			assertTrue(true);
 
 		}
+
 }
+
+
