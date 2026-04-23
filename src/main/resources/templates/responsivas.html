@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Responsivas · Inventario</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+    /* ====== Tema y layout base (dark) ====== */
+    :root{--bg:#0f172a;--panel:#111827;--muted:#94a3b8;--txt:#e5e7eb;--accent:#22c55e;--accent2:#38bdf8;--danger:#ef4444;--border:#1f2937;--chip:#0b1220}
+    *{box-sizing:border-box;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Inter,Arial}
+    body{margin:0;background:var(--bg);color:var(--txt)}
+    header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:center}
+    header h1{margin:0;font-size:18px;font-weight:700}
+    /* Enlace con estilo de botón */
+    a.btn{display:inline-block;padding:9px 12px;border-radius:10px;border:1px solid var(--border);background:#101827;color:var(--txt);text-decoration:none}
+    a.btn:hover{background:#0b1220}
+    main{padding:16px;max-width:1200px;margin:0 auto}
+    .card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:14px;margin-bottom:16px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+    label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+    input,select{background:#0b1020;border:1px solid #1e293b;color:var(--txt);padding:8px 10px;border-radius:10px;outline:none;width:100%}
+    input:focus,select:focus{border-color:#334155}
+    button{border:1px solid var(--border);background:#101827;color:var(--txt);padding:9px 12px;border-radius:10px;cursor:pointer}
+    /* Variantes de botones */
+    button.primary{background:linear-gradient(180deg,#064e3b,#052e2b);border-color:#115e59}
+    button.info{background:linear-gradient(180deg,#0b3a5b,#0a2742);border-color:#134e6b}
+    button.danger{background:linear-gradient(180deg,#3a0b0b,#2a0a0a);border-color:#6b1313}
+    /* Tabla y helpers visuales */
+    table{width:100%;border-collapse:collapse;border:1px solid var(--border);overflow:hidden;border-radius:12px}
+    thead th{font-size:12px;color:#94a3b8;text-align:left;background:#0c1423;border-bottom:1px solid var(--border);padding:10px}
+    tbody td{border-top:1px solid var(--border);padding:10px;font-size:14px}
+    tbody tr:hover{background:#0c1423}
+    .right{margin-left:auto}
+    .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;background:var(--chip);border:1px solid var(--border);border-radius:999px;color:var(--muted);font-size:12px}
+    .muted{color:var(--muted)}
+    .grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .side{display:grid;grid-template-columns:2.4fr 1fr;gap:12px}
+    @media (max-width:980px){.side{grid-template-columns:1fr}}
+    .mini{font-size:12px;color:#9ca3af}
+    .scroll{max-height:300px;overflow:auto;border:1px solid var(--border);border-radius:12px;padding:8px;background:#0b1220}
+    .pill{padding:3px 8px;border-radius:999px;font-size:12px;border:1px solid var(--border);background:#0b1220;color:#9ca3af}
+    .hr{height:1px;background:var(--border);margin:10px 0}
+    .list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  </style>
+</head>
+<body>
+<header>
+    <h1>Responsivas</h1>
+    <!-- Botón para ir al CRUD de equipos -->
+    <a href="/ui/equipos" class="btn">Ir al CRUD de equipos</a>
+    <!-- Chip de estado (mensajes rápidos al usuario) -->
+    <div class="right chip" id="statusChip">Listo</div>
+</header>
+
+<main>
+    <!-- Vista principal en dos columnas: IZQ selección de equipos / DER metadatos y acciones -->
+    <section class="card side">
+        <!-- ===== IZQUIERDA: BUSCADOR y LISTA ===== -->
+        <div>
+            <div class="row">
+                <!-- Filtros de búsqueda: categoría + texto libre -->
+                <div style="min-width:220px;flex:1">
+                    <label>Categoría</label>
+                    <select id="rTipo"></select>
+                </div>
+                <div style="min-width:220px;flex:1">
+                    <label>Buscar por marca, modelo o serie</label>
+                    <input id="rQ" placeholder="Buscar..." />
+                </div>
+                <button id="btnBuscarR" class="info">Buscar</button>
+                <!-- Contador de seleccionados (carrito) -->
+                <div class="right chip"><span id="rCount">0</span> seleccionados</div>
+            </div>
+
+            <div class="row" style="margin-top:6px">
+                <!-- Limpia la selección actual -->
+                <button id="btnVaciarSel">Vaciar selección</button>
+            </div>
+
+            <!-- Resultados de equipos, con checkboxes por fila para armar el lote -->
+            <div class="card" style="margin:10px 0 0 0">
+                <table>
+                    <thead>
+                    <tr>
+                        <th style="width:48px"><input type="checkbox" id="rAll"></th>
+                        <th>Tipo</th><th>ID</th><th>Marca</th><th>Modelo</th><th>N° Serie</th><th>Estado</th>
+                    </tr>
+                    </thead>
+                    <tbody id="rTBody"></tbody>
+                </table>
+            </div>
+
+            <!-- Vista previa del “carrito” (items seleccionados antes de mandar al DOCX) -->
+            <div class="card mini" style="margin-top:10px">
+                <div><b>Seleccionados (pendientes de agregar):</b></div>
+                <div id="cartBox" class="scroll">No hay seleccionados.</div>
+                <div class="hr"></div>
+                <div class="muted">Sugerencia: usa el filtro por <i>categoría</i> + búsqueda. Marca con los checks los equipos a agregar.</div>
+            </div>
+        </div>
+
+        <!-- ===== DERECHA: METADATOS + ACCIONES SOBRE RESPONSIVA ===== -->
+        <div>
+            <div class="card">
+                <h3 style="margin:0 0 8px 0">Responsiva</h3>
+                <!-- Datos que se mapean a la tabla de persona o marcadores (${persona}, etc.) -->
+                <div class="grid-2">
+                    <div><label>Nombre archivo (.docx)</label><input id="rvNombre" placeholder="Ej: JUAN_PEREZ.docx"></div>
+
+                    <div><label>Persona</label><input id="rvPersona" placeholder="Nombre de quien recibe"></div>
+                    <div><label>Área</label><input id="rvArea" placeholder="Área"></div>
+
+                    <div><label>Departamento</label><input id="rvDepto" placeholder="Departamento"></div>
+                    <div><label>Puesto</label><input id="rvPuesto" placeholder="(opcional)"></div>
+
+                    <div><label>Fecha</label><input id="rvFecha" type="date"></div>
+                    <div><label>Clave (opcional)</label><input id="rvClave" placeholder="(opcional)"></div>
+                </div>
+
+                <!-- Acciones principales: crear nueva con lote, agregar lote a existente, guardar metadatos -->
+                <div class="row" style="margin-top:10px">
+                    <button id="btnCrearResp" class="primary">Crear responsiva con lote</button>
+                    <button id="btnAgregarLote" class="info">Agregar lote a EXISTENTE</button>
+                    <button id="btnGuardarMeta">Guardar metadatos</button>
+                </div>
+                <div class="mini" style="margin-top:6px">Crea el DOCX desde plantilla y agrega los seleccionados.</div>
+            </div>
+
+            <!-- Gestión de responsivas existentes: refrescar, filtrar y descargar -->
+            <div class="card">
+                <div class="row" style="align-items:center">
+                    <button id="btnRefResp" class="info">Cargar/Refrescar responsivas</button>
+                    <div class="right" style="display:flex;gap:8px;align-items:flex-end">
+                        <div>
+                            <label>Buscar responsiva por nombre</label>
+                            <input id="respSearch" placeholder="Filtrar por nombre..." />
+                        </div>
+                    </div>
+                </div>
+                <div id="respList" class="list" style="margin-top:10px"></div>
+            </div>
+
+            <!-- Bitácora en sesión: operaciones recientes -->
+            <div class="card">
+                <h3 style="margin:0 0 8px 0">Agregados recientes</h3>
+                <div id="recentBox" class="scroll mini">Aún no se agregan equipos.</div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<script>
+/* =========================
+   Endpoints del backend
+   ========================= */
+const API_EQUIPOS_UNI     = '/api/equipos/unificado';        // (Opcional) búsqueda global si la implementaste
+const API_EQUIPOS_BASE    = '/api/equipos';                  // CRUD por tipo
+const API_RESP_CREAR_LOTE = '/api/responsivas/crear-con-items';
+const API_RESP_ADD_LOTE   = '/api/responsivas/agregar-multiples';
+const API_RESP_METADATOS  = '/api/responsivas/metadatos';
+const API_RESP_LIST       = '/api/responsivas';
+const API_RESP_DESCARGAR  = '/api/responsivas/descargar?nombreArchivo=';
+
+/* Tipos de equipos válidos (deben coincidir con el backend) */
+const TIPOS = [
+  'pantallas','cctv','accesorios','multifuncionales_impresoras',
+  'nas_server_pc_laptops','radio','switch_aps','tablets',
+  'telefonos','terminales_pv','ups_regulador_nobreak'
+];
+
+/* ========== Utilidades de UI/Fetch ========== */
+const $ = q => document.querySelector(q);
+const chip = $('#statusChip');
+
+function setStatus(m){ chip.textContent = m; }   // Mensaje en el chip
+function toast(m){ setStatus(m); }               // Alias corto
+
+// fetchJSON: parsea JSON si hay, arroja error con mensaje útil si !ok
+async function fetchJSON(url, opts={}){
+  const r = await fetch(url, opts); let j=null; try{ j=await r.json(); }catch(_){}
+  if(!r.ok){ throw new Error((j && (j.error||j.message)) || r.statusText); }
+  return j;
+}
+
+// Rellena un <select> con opciones; withEmpty añade "(todos)"
+function fillSelect(el, arr, withEmpty=false){
+  el.innerHTML = ''; if(withEmpty) el.appendChild(new Option('(todos)',''));
+  arr.forEach(x=> el.appendChild(new Option(x,x)));
+}
+
+/* ========== Selección de equipos (lado izquierdo) ========== */
+const rTipo = $('#rTipo'), rQ = $('#rQ'), rTBody = $('#rTBody'), rAll = $('#rAll'), rCount = $('#rCount');
+fillSelect(rTipo, TIPOS, true); // valor vacío = buscar en todas las categorías
+
+// Estructura “carrito”: guardamos “tipo|id”
+const seleccion = new Set();
+const cartBox = $('#cartBox'), recentBox = $('#recentBox');
+
+// Acciones de búsqueda/selección
+$('#btnBuscarR').addEventListener('click', cargarEquiposResp);
+rQ.addEventListener('keydown', e=>{ if(e.key==='Enter') cargarEquiposResp(); });
+rTipo.addEventListener('change', cargarEquiposResp);
+$('#btnVaciarSel').addEventListener('click', ()=>{
+  seleccion.clear(); rAll.checked=false;
+  actualizarContador(); renderCarrito();
+});
+
+// Checkbox maestro: marcar/desmarcar todo lo que está en la tabla visible
+rAll.addEventListener('change', ()=>{
+  rTBody.querySelectorAll('input[type=checkbox]').forEach(ch=>{
+    ch.checked = rAll.checked; const key = ch.dataset.k;
+    if(ch.checked) seleccion.add(key); else seleccion.delete(key);
+  });
+  actualizarContador(); renderCarrito();
+});
+
+/**
+ * Carga equipos para la tabla izquierda con una estrategia robusta:
+ * 1) Intenta /unificado si hay tipo o texto
+ * 2) Si no hay resultados, consulta /{tipo}?q=...
+ * 3) Si no hay tipo, concatena todas las tablas
+ */
+async function cargarEquiposResp(){
+  try{
+    setStatus('Buscando equipos…');
+    const q = rQ.value.trim();
+    const tipo = rTipo.value;
+    let data = [];
+
+    // 1) /unificado (si existe en tu backend)
+    if (q || tipo){
+      try{
+        const params = new URLSearchParams();
+        if (tipo) params.set('tipo', tipo);
+        if (q)    params.set('q', q);
+        const uni = await fetchJSON(`${API_EQUIPOS_UNI}?${params.toString()}`);
+        if (Array.isArray(uni) && uni.length) data = uni;
+      }catch(_){/* ignora: pasamos al fallback */}
+    }
+
+    // 2) Fallback por tipo
+    if (!data.length && tipo){
+      const url = `${API_EQUIPOS_BASE}/${encodeURIComponent(tipo)}${q?`?q=${encodeURIComponent(q)}`:''}`;
+      const arr = await fetchJSON(url);
+      data = arr.map(d => ({ tipo, ...d })); // añade el campo tipo si el backend no lo trae
+    }
+
+    // 3) Sin tipo: consulta todas las categorías y concatena resultados
+    if (!data.length && !tipo){
+      const chunks = await Promise.all(TIPOS.map(async t=>{
+        const url = `${API_EQUIPOS_BASE}/${encodeURIComponent(t)}${q?`?q=${encodeURIComponent(q)}`:''}`;
+        try{
+          const arr = await fetchJSON(url);
+          return arr.map(d => ({ tipo:t, ...d }));
+        }catch{ return []; }
+      }));
+      data = chunks.flat();
+    }
+
+    renderRespListado(data);
+    toast(`Resultados: ${data.length}`);
+  }catch(err){
+    toast('Error: '+err.message);
+    renderRespListado([]);
+  }
+}
+
+// Pinta filas en la tabla de equipos; engancha checkbox de cada fila
+function renderRespListado(arr){
+  rTBody.innerHTML = '';
+  arr.forEach(r=>{
+    const key = `${r.tipo}|${r.id}`;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="checkbox" data-k="${key}" ${seleccion.has(key)?'checked':''}></td>
+      <td>${r.tipo??''}</td>
+      <td>${r.id??''}</td>
+      <td>${r.marca??''}</td>
+      <td>${r.modelo??''}</td>
+      <td>${r.numeroDeSerie??''}</td>
+      <td>${r.estado??''}</td>
+    `;
+    rTBody.appendChild(tr);
+  });
+  rTBody.querySelectorAll('input[type=checkbox]').forEach(ch=>{
+    ch.addEventListener('change', ()=>{
+      const k = ch.dataset.k;
+      if(ch.checked) seleccion.add(k); else seleccion.delete(k);
+      actualizarContador(); renderCarrito();
+    });
+  });
+  actualizarContador(); renderCarrito();
+}
+
+// UI del carrito (lista de “tipo #id” seleccionados)
+function actualizarContador(){ rCount.textContent = seleccion.size; }
+function renderCarrito(){
+  if(!seleccion.size){ cartBox.innerHTML = 'No hay seleccionados.'; return; }
+  cartBox.innerHTML = Array.from(seleccion).map(k=>{
+    const [tipo,id] = k.split('|'); return `<div>${tipo} #${id}</div>`;
+  }).join('');
+}
+
+// Convierte Set a arreglo de objetos {tipo,id} para mandar al backend
+function selectedItemsArray(){
+  return Array.from(seleccion).map(k=>{ const [tipo,id]=k.split('|'); return {tipo, id:Number(id)}; });
+}
+
+/* ========== Acciones sobre Responsiva (lado derecho) ========== */
+$('#btnCrearResp').addEventListener('click', crearResponsiva);
+$('#btnAgregarLote').addEventListener('click', agregarLoteAExistente);
+$('#btnGuardarMeta').addEventListener('click', guardarMetadatos);
+
+/** Crea una responsiva nueva desde plantilla + agrega el lote seleccionado. */
+async function crearResponsiva(){
+  if(!seleccion.size){ toast('Selecciona al menos un equipo'); return; }
+  const body = {
+    nombreResponsiva: $('#rvNombre').value.trim() || null,
+    crearNueva: true,
+    // metadatos que llenan la tabla o marcadores del DOCX
+    persona: $('#rvPersona').value.trim() || null,
+    area: $('#rvArea').value.trim() || null,
+    departamento: $('#rvDepto').value.trim() || null,
+    puesto: $('#rvPuesto').value.trim() || null,
+    clave: $('#rvClave').value.trim() || null,
+    fecha: $('#rvFecha').value || "",
+    items: selectedItemsArray()
+  };
+  try{
+    const res = await fetchJSON(API_RESP_CREAR_LOTE, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    toast(`Responsiva OK · agregados: ${res.agregados ?? 0}`);
+    seleccion.clear(); actualizarContador(); renderCarrito();
+    addRecent(`Creada · ${res.agregados ?? 0} equipos`);
+    await listarResponsivas(); // refresca el listado de archivos
+  }catch(err){ toast('Error: '+err.message); }
+}
+
+/** Agrega el lote seleccionado a una responsiva ya existente (no crea). */
+async function agregarLoteAExistente(){
+  if(!seleccion.size){ toast('Selecciona al menos un equipo'); return; }
+  const nombre = $('#rvNombre').value.trim();
+  if(!nombre){ toast('Indica el nombre de la responsiva existente'); return; }
+  const body = { nombreResponsiva:nombre, crearNueva:false, items:selectedItemsArray() };
+  try{
+    const res = await fetchJSON(API_RESP_ADD_LOTE, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    toast(`Agregados: ${res.agregados ?? 0}`); addRecent(`Agregados: ${res.agregados ?? 0}`);
+    await listarResponsivas();
+  }catch(err){ toast('Error: '+err.message); }
+}
+
+/** Guarda/actualiza los metadatos de persona/área/… en la responsiva. */
+async function guardarMetadatos(){
+  const body = {
+    nombreResponsiva: $('#rvNombre').value.trim(),
+    persona: $('#rvPersona').value.trim(),
+    area: $('#rvArea').value.trim(),
+    departamento: $('#rvDepto').value.trim(),
+    puesto: $('#rvPuesto').value.trim(),
+    fecha: $('#rvFecha').value || "",
+    clave: $('#rvClave').value.trim() || null
+  };
+  if(!body.nombreResponsiva){ toast('Escribe el nombre del archivo'); return; }
+  try{
+    await fetchJSON(API_RESP_METADATOS, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    toast('Metadatos guardados'); addRecent('Metadatos actualizados');
+  }catch(err){ toast('Error: '+err.message); }
+}
+
+// Registra un evento en la bitácora “Agregados recientes”
+function addRecent(msg){
+  const line = document.createElement('div');
+  line.textContent = `${new Date().toLocaleTimeString()} · ${msg}`;
+  recentBox.prepend(line);
+}
+
+/* ========== Listado de responsivas (nombres + descarga) ========== */
+let respCache = [];
+const respList = $('#respList');
+
+$('#btnRefResp').addEventListener('click', listarResponsivas);
+$('#respSearch').addEventListener('input', filtrarResponsivas);
+
+// Pide al backend la lista de .docx disponibles y pinta cards con link de descarga
+async function listarResponsivas(){
+  try{
+    respCache = await fetchJSON(API_RESP_LIST);
+    renderRespList(respCache);
+  }catch(err){ toast('Error: '+err.message); }
+}
+
+function renderRespList(arr){
+  respList.innerHTML = '';
+  if(!arr.length){ respList.innerHTML = `<div class="muted">No hay responsivas</div>`; return; }
+  arr.forEach(name=>{
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="row" style="align-items:center">
+        <div><span class="pill">DOCX</span> <b style="margin-left:8px">${name}</b></div>
+        <!-- Descarga directa vía /descargar?nombreArchivo=... -->
+        <a class="right" href="${API_RESP_DESCARGAR + encodeURIComponent(name)}" download>Descargar</a>
+      </div>
+    `;
+    respList.appendChild(card);
+  });
+}
+
+// Filtro cliente por nombre de archivo
+function filtrarResponsivas(){
+  const q = $('#respSearch').value.toLowerCase();
+  const filtered = respCache.filter(n => n.toLowerCase().includes(q));
+  renderRespList(filtered);
+}
+
+/* ========== Init ========== */
+(async function init(){
+  // Pre-cargar fecha de hoy en el input de fecha
+  const f = $('#rvFecha'); if(f && !f.value) f.value = new Date().toISOString().slice(0,10);
+  await cargarEquiposResp();  // carga la lista inicial de equipos
+  await listarResponsivas();  // y la lista de .docx existentes
+})();
+</script>
+</body>
+</html>

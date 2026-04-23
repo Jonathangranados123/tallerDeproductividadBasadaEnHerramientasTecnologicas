@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Inventario – CRUD + Filtros</title>
+
+    <style>
+    :root { --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --txt:#e5e7eb; --ok:#22c55e; --err:#ef4444; --acc:#22d3ee; --b:#1f2937; --r:14px; }
+    *{box-sizing:border-box;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue";}
+    body{margin:0;background:linear-gradient(135deg,#0b1220,#0a1120 60%,#0c1426);color:var(--txt)}
+    header{padding:16px 18px;border-bottom:1px solid var(--b);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    header h1{margin:0;font-size:20px}
+    .chip{font-size:12px;padding:4px 10px;border:1px solid #223;border-radius:999px;color:var(--muted)}
+
+    .btn{display:inline-block;padding:9px 13px;border-radius:10px;border:1px solid #223043;background:#0e172a;color:#cbd5e1;text-decoration:none}
+    .btn:hover{background:#0b1220}
+
+    main{padding:16px;display:grid;gap:14px;grid-template-columns:1.25fr 1fr}
+    section{background:rgba(17,24,39,.78);border:1px solid var(--b);border-radius:var(--r);padding:14px;box-shadow:0 10px 28px rgba(0,0,0,.35)}
+    h2{margin:0 0 8px;font-size:16px;color:#cbd5e1}
+
+    label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px}
+    input,select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #223043;background:#0b1220;color:var(--txt)}
+    input::placeholder{color:#6b7280}
+    .row{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+    .row3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+
+    .toolbar{display:grid;grid-template-columns:220px 1fr auto;gap:10px;align-items:end}
+    .filters{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:8px}
+
+    .actions{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
+    button{border:1px solid #223043;background:#0e172a;color:#cbd5e1;padding:9px 13px;border-radius:10px;cursor:pointer}
+    button.primary{background:linear-gradient(180deg,#0ea5e9,#0891b2);border:0;color:white}
+    button.warn{background:linear-gradient(180deg,#ef4444,#b91c1c);border:0;color:white}
+    button.ghost{background:#0b1220}
+
+    table{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px}
+    th,td{padding:9px;border-bottom:1px solid var(--b);white-space:nowrap;text-align:left}
+    tr:hover{background:rgba(255,255,255,.03)}
+    .muted{color:var(--muted)}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;background:#0b1322;border:1px solid #1f2a40;color:#8dd3ff}
+    .msg{font-size:12px;margin-top:8px}
+    .msg.ok{color:var(--ok)} .msg.err{color:var(--err)}
+
+    #qrModal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center}
+    #qrBox{background:#0b1220;border:1px solid var(--b);border-radius:12px;padding:14px}
+    #qrBox img{max-width:320px;height:auto;display:block}
+
+    @media(max-width:1100px){
+      main{grid-template-columns:1fr}
+      .filters{grid-template-columns:repeat(2,1fr)}
+      .toolbar{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+<header>
+    <h1>Inventario – CRUD + Filtros</h1>
+    <a href="/responsiva/equipos" class="btn">Responsivas</a>
+    <span class="chip">API: <code id="apiBaseChip"></code></span>
+</header>
+
+<main>
+    <section>
+        <h2>Listado por tipo</h2>
+
+        <div class="toolbar">
+            <div>
+                <label>Tipo de equipo</label>
+                <select id="tipoSel">
+                    <option>pantallas</option>
+                    <option>cctv</option>
+                    <option>tablets</option>
+                    <option>telefonos</option>
+                    <option>radio</option>
+                    <option>switch_aps</option>
+                    <option>multifuncionales_impresoras</option>
+                    <option>nas_server_pc_laptops</option>
+                    <option>terminales_pv</option>
+                    <option>ups_regulador_nobreak</option>
+                    <option>accesorios</option>
+                </select>
+            </div>
+            <div>
+                <label>Búsqueda unificada (marca/modelo/serie + tipo de producto)</label>
+                <input id="qInput" type="search" placeholder="Escribe y Enter para buscar en /unificado…" />
+            </div>
+            <div>
+                <button id="btnReload" class="ghost">Recargar</button>
+            </div>
+        </div>
+
+        <div class="filters">
+            <div><label>Marca</label><input id="f_marca_f" placeholder="Filtrar marca…"></div>
+            <div><label>Modelo</label><input id="f_modelo_f" placeholder="Filtrar modelo…"></div>
+            <div><label>N° Serie</label><input id="f_serie_f" placeholder="Filtrar serie…"></div>
+            <div><label>Estado</label><input id="f_estado_f" placeholder="Filtrar estado…"></div>
+            <div><label>Área</label><input id="f_area_f" placeholder="Filtrar área…"></div>
+            <div><label>Departamento</label><input id="f_depto_f" placeholder="Filtrar depto…"></div>
+            <div><label>Responsable</label><input id="f_resp_f" placeholder="Filtrar responsable…"></div>
+            <div><label>Puesto</label><input id="f_puesto_f" placeholder="Filtrar puesto…"></div>
+            <div><label>Tipo de producto</label><input id="f_tipoProd_f" placeholder="Filtrar tipo de producto…"></div>
+        </div>
+
+        <div class="muted" style="margin:6px 0 8px">Haz click en una fila para editar; usa filtros para acotar resultados.</div>
+
+        <div style="overflow:auto;">
+            <table id="tbl">
+                <thead>
+                <tr>
+                    <th>ID</th><th>Marca</th><th>Modelo</th><th>Tipo de producto</th><th>N° Serie</th><th>Estado</th>
+                    <th>Área</th><th>Depto</th><th>Responsable</th><th>Puesto</th><th></th>
+                </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div class="msg" id="listMsg"></div>
+    </section>
+
+    <section>
+        <h2>Formulario</h2>
+
+        <div class="row">
+            <div><label>Tipo</label><input id="f_tipo" disabled></div>
+            <div><label>ID</label><input id="f_id" disabled></div>
+        </div>
+
+        <div class="row3" style="margin-top:8px">
+            <div><label>Marca</label><input id="i_marca"></div>
+            <div><label>Modelo</label><input id="i_modelo"></div>
+            <div><label>Número de serie</label><input id="i_serie"></div>
+        </div>
+        <div class="row3" style="margin-top:8px">
+            <div><label>Estado</label><input id="i_estado"></div>
+            <div><label>Área</label><input id="i_area"></div>
+            <div><label>Departamento</label><input id="i_depto"></div>
+        </div>
+        <div class="row" style="margin-top:8px">
+            <div><label>Responsable</label><input id="i_resp"></div>
+            <div><label>Puesto</label><input id="i_puesto"></div>
+        </div>
+
+        <div class="actions">
+            <button id="btnNuevo" class="ghost">Nuevo</button>
+            <button id="btnCrear" class="primary">Crear</button>
+            <button id="btnActualizar">Actualizar</button>
+            <button id="btnEliminar" class="warn">Eliminar</button>
+            <button id="btnQR" class="ghost">Ver QR</button>
+        </div>
+        <div class="msg" id="formMsg"></div>
+    </section>
+</main>
+
+<div id="qrModal">
+    <div id="qrBox">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div style="font-weight:600">QR del equipo</div>
+            <button id="qrClose">Cerrar</button>
+        </div>
+        <img id="qrImg" alt="QR" />
+    </div>
+</div>
+
+<!-- arriba, dejo esto más robusto -->
+<script>
+(() => {
+  /* =================== Config & helpers =================== */
+  const API = `${location.origin}/api/equipos`;
+  const chip = document.getElementById('apiBaseChip'); if (chip) chip.textContent = API;
+
+  const $ = id => document.getElementById(id);
+  const headers = {'Content-Type':'application/json'};
+  const to = p => p.then(r=>[null,r]).catch(e=>[e,null]);
+
+  let rawData = [];
+
+  // Fallback visible para "tipo de producto"
+  const human = s => (s ?? '').toString().replace(/_/g,' ');
+  function getTipoProd(row){
+    return human(
+      row.tipoDeProducto ??
+      row.tipo_de_producto ??
+      row.tipo ??
+      $('tipoSel').value        // último recurso: el tipo seleccionado
+    );
+  }
+
+  /* =================== Listado =================== */
+async function loadList(){
+  const tipo = $('tipoSel').value;
+  $('listMsg').textContent = 'Cargando…';
+  const [err,res] = await to(fetch(`${API}/${encodeURIComponent(tipo)}`));
+  if(err){ $('listMsg').textContent='Error de red'; return; }
+  if(!res.ok){ $('listMsg').textContent=`Error ${res.status}`; return; }
+  rawData = await res.json();
+  applyFiltersAndRender();
+  clearForm(tipo);
+}
+  /* Aplica filtros cliente con fallback para tipo de producto */
+  function applyFiltersAndRender(){
+    const f = {
+      marca:  $('f_marca_f').value.trim().toLowerCase(),
+      modelo: $('f_modelo_f').value.trim().toLowerCase(),
+      serie:  $('f_serie_f').value.trim().toLowerCase(),
+      estado: $('f_estado_f').value.trim().toLowerCase(),
+      area:   $('f_area_f').value.trim().toLowerCase(),
+      depto:  $('f_depto_f').value.trim().toLowerCase(),
+      resp:   $('f_resp_f').value.trim().toLowerCase(),
+      puesto: $('f_puesto_f').value.trim().toLowerCase(),
+      tipoProd: ($('f_tipoProd_f')?.value || '').trim().toLowerCase()
+    };
+    const tipoSelLower = $('tipoSel').value.toLowerCase();
+
+    const arr = rawData.filter(x=>{
+      const v = (k, alt) => (((alt!==undefined ? (x[k] ?? x[alt]) : x[k]) ?? '') + '').toLowerCase();
+      const tp = (v('tipoDeProducto','tipo_de_producto') || v('tipo') || tipoSelLower); // fallback
+      return (!f.marca    || v('marca').includes(f.marca)) &&
+             (!f.modelo   || v('modelo').includes(f.modelo)) &&
+             (!f.serie    || v('numeroDeSerie','numero_de_serie').includes(f.serie)) &&
+             (!f.estado   || v('estado').includes(f.estado)) &&
+             (!f.area     || v('area').includes(f.area)) &&
+             (!f.depto    || v('departamento').includes(f.depto)) &&
+             (!f.resp     || v('responsable').includes(f.resp)) &&
+             (!f.puesto   || v('puesto').includes(f.puesto)) &&
+             (!f.tipoProd || tp.includes(f.tipoProd));
+    });
+    renderTable(arr);
+    $('listMsg').textContent = `Mostrando ${arr.length} / ${rawData.length}`;
+  }
+
+  /* Render con columna “Tipo de producto” usando fallback */
+  function renderTable(arr){
+    const tb = $('tbl').querySelector('tbody');
+    tb.innerHTML = '';
+    arr.forEach(row=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><span class="pill">${row.id ?? ''}</span></td>
+        <td>${row.marca ?? ''}</td>
+        <td>${row.modelo ?? ''}</td>
+        <td>${getTipoProd(row)}</td>
+        <td>${row.numeroDeSerie ?? row.numero_de_serie ?? ''}</td>
+        <td>${row.estado ?? ''}</td>
+        <td>${row.area ?? ''}</td>
+        <td>${row.departamento ?? ''}</td>
+        <td>${row.responsable ?? ''}</td>
+        <td>${row.puesto ?? ''}</td>
+        <td><button class="ghost" data-id="${row.id}">QR</button></td>
+      `;
+      tr.addEventListener('click', e=>{
+        if(e.target.tagName==='BUTTON') return;
+        fillForm($('tipoSel').value, row);
+      });
+      tr.querySelector('button').addEventListener('click', ()=>{
+        fillForm($('tipoSel').value, row); showQR();
+      });
+      tb.appendChild(tr);
+    });
+  }
+
+  /* =================== CRUD =================== */
+  function clearForm(tipo){
+    $('f_tipo').value = tipo ?? $('tipoSel').value;
+    ['f_id','i_marca','i_modelo','i_serie','i_estado','i_area','i_depto','i_resp','i_puesto']
+      .forEach(id => $(id).value = '');
+    $('formMsg').textContent = '';
+  }
+
+  function fillForm(tipo,row){
+    $('f_tipo').value = tipo; $('f_id').value = row.id ?? '';
+    $('i_marca').value = row.marca ?? '';
+    $('i_modelo').value = row.modelo ?? '';
+    $('i_serie').value  = row.numeroDeSerie ?? row.numero_de_serie ?? '';
+    $('i_estado').value = row.estado ?? '';
+    $('i_area').value   = row.area ?? '';
+    $('i_depto').value  = row.departamento ?? '';
+    $('i_resp').value   = row.responsable ?? '';
+    $('i_puesto').value = row.puesto ?? '';
+  }
+
+  function dtoFromForm(){ return {
+    marca: $('i_marca').value.trim(),
+    modelo: $('i_modelo').value.trim(),
+    numeroDeSerie: $('i_serie').value.trim(),
+    estado: $('i_estado').value.trim(),
+    area: $('i_area').value.trim(),
+    departamento: $('i_depto').value.trim(),
+    responsable: $('i_resp').value.trim(),
+    puesto: $('i_puesto').value.trim()
+  } }
+
+  async function crear(){
+    const tipo = $('f_tipo').value, body = JSON.stringify(dtoFromForm());
+    $('formMsg').textContent = 'Creando…';
+    const [e,r] = await to(fetch(`${API}/${encodeURIComponent(tipo)}`, {method:'POST', headers, body}));
+    if(e){ console.error(e); $('formMsg').textContent='Error de red'; return; }
+    if(!r.ok){ $('formMsg').textContent=`Error ${r.status}: ${await r.text()}`; return; }
+    $('formMsg').textContent = 'Creado ✅'; loadList();
+  }
+
+  async function actualizar(){
+    const tipo = $('f_tipo').value, id = $('f_id').value;
+    if(!id){ $('formMsg').textContent='Selecciona un registro'; return; }
+    const body = JSON.stringify(dtoFromForm()); $('formMsg').textContent='Actualizando…';
+    const [e,r] = await to(fetch(`${API}/${encodeURIComponent(tipo)}/${id}`, {method:'PUT', headers, body}));
+    if(e){ console.error(e); $('formMsg').textContent='Error de red'; return; }
+    if(!r.ok){ $('formMsg').textContent=`Error ${r.status}: ${await r.text()}`; return; }
+    $('formMsg').textContent = 'Actualizado ✅'; loadList();
+  }
+
+  async function eliminar(){
+    const tipo = $('f_tipo').value, id = $('f_id').value;
+    if(!id){ $('formMsg').textContent='Selecciona un registro'; return; }
+    if(!confirm(`¿Eliminar ${tipo} #${id}?`)) return;
+    $('formMsg').textContent='Eliminando…';
+    const [e,r] = await to(fetch(`${API}/${encodeURIComponent(tipo)}/${id}`, {method:'DELETE'}));
+    if(e){ console.error(e); $('formMsg').textContent='Error de red'; return; }
+    if(r.status !== 204){ $('formMsg').textContent=`Error ${r.status}: ${await r.text()}`; return; }
+    $('formMsg').textContent = 'Eliminado ✅'; loadList();
+  }
+
+  /* =================== QR =================== */
+  function showQR(){
+    const tipo = $('f_tipo').value, id = $('f_id').value;
+    if(!id){ $('formMsg').textContent='Selecciona un registro'; return; }
+    $('qrImg').src = `${API}/${encodeURIComponent(tipo)}/${id}/qr?ts=${Date.now()}`;
+    $('qrModal').style.display = 'flex';
+  }
+
+  /* =================== Búsqueda unificada =================== */
+ async function searchUnified(){
+  const q = $('qInput').value.trim();
+  const tipo = $('tipoSel').value;
+
+  if(!q){ loadList(); return; }
+  $('listMsg').textContent = 'Buscando…';
+
+  const [e,r] = await to(fetch(`${API}/${encodeURIComponent(tipo)}?q=${encodeURIComponent(q)}`));
+  if(e){ $('listMsg').textContent='Error de red'; return; }
+  if(!r.ok){ $('listMsg').textContent=`Error ${r.status}`; return; }
+  rawData = await r.json();
+  applyFiltersAndRender(); // aquí se aplica además el filtro cliente de “Tipo de producto”
+}
+  /* =================== Eventos =================== */
+  function wireEvents(){
+    $('tipoSel').addEventListener('change', loadList);
+    $('btnReload').addEventListener('click', loadList);
+    $('btnNuevo').addEventListener('click', ()=>clearForm());
+    $('btnCrear').addEventListener('click', crear);
+    $('btnActualizar').addEventListener('click', actualizar);
+    $('btnEliminar').addEventListener('click', eliminar);
+    $('btnQR').addEventListener('click', showQR);
+    $('qrClose').addEventListener('click', ()=> $('qrModal').style.display='none');
+    $('qrModal').addEventListener('click', e=>{ if(e.target.id==='qrModal') $('qrModal').style.display='none'; });
+
+    ['f_marca_f','f_modelo_f','f_serie_f','f_estado_f','f_area_f','f_depto_f','f_resp_f','f_puesto_f','f_tipoProd_f']
+      .forEach(id=> $(id).addEventListener('input', applyFiltersAndRender));
+
+    $('qInput').addEventListener('keydown', e=>{ if(e.key==='Enter') searchUnified(); });
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    try { wireEvents(); loadList(); } catch(e){ console.error(e); }
+  });
+})();
+</script>
+
+</body>
+</html>

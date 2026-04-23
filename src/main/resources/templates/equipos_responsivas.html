@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Inventario · CRUD & Responsivas</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+    :root{
+      --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --txt:#e5e7eb; --accent:#22c55e; --accent2:#38bdf8; --danger:#ef4444;
+      --border:#1f2937; --chip:#0b1220;
+    }
+    *{box-sizing:border-box;font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial;}
+    body{margin:0;background:var(--bg);color:var(--txt);}
+    header{padding:16px 20px;border-bottom:1px solid var(--border); display:flex;gap:12px; align-items:center;}
+    header h1{margin:0;font-size:18px;font-weight:700; letter-spacing:.3px}
+    .tabs{display:flex; gap:6px; margin-left:12px}
+    .tab{padding:8px 12px; border:1px solid var(--border); background:var(--chip); color:var(--muted); border-radius:10px; cursor:pointer}
+    .tab.active{background:linear-gradient(180deg,#12203a,#101827); color:var(--txt); border-color:#22314a}
+    main{padding:16px; max-width:1200px; margin:0 auto;}
+    .card{background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:14px; margin-bottom:16px}
+    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end}
+    label{display:block; font-size:12px; color:var(--muted); margin-bottom:6px}
+    input, select{
+      background:#0b1020; border:1px solid #1e293b; color:var(--txt); padding:8px 10px; border-radius:10px; outline:none; width:100%;
+    }
+    input:focus,select:focus{border-color:#334155}
+    button{border:1px solid var(--border); background:#101827; color:var(--txt); padding:9px 12px; border-radius:10px; cursor:pointer}
+    button.primary{background:linear-gradient(180deg,#064e3b,#052e2b); border-color:#115e59}
+    button.info{background:linear-gradient(180deg,#0b3a5b,#0a2742); border-color:#134e6b}
+    button.danger{background:linear-gradient(180deg,#3a0b0b,#2a0a0a); border-color:#6b1313}
+    button:disabled{opacity:.6; cursor:not-allowed}
+    table{width:100%; border-collapse:collapse; border:1px solid var(--border); overflow:hidden; border-radius:12px}
+    thead th{font-size:12px; color:#94a3b8; text-align:left; background:#0c1423; border-bottom:1px solid var(--border); padding:10px}
+    tbody td{border-top:1px solid var(--border); padding:10px; font-size:14px}
+    tbody tr:hover{background:#0c1423}
+    .right{margin-left:auto}
+    .chip{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; background:var(--chip); border:1px solid var(--border); border-radius:999px; color:var(--muted); font-size:12px}
+    .muted{color:var(--muted)}
+    .grid-4{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px}
+    .grid-3{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px}
+    .grid-2{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px}
+    .hide{display:none}
+    .qr-btn{font-size:12px; padding:6px 8px}
+    .pill{padding:3px 8px; border-radius:999px; font-size:12px; border:1px solid var(--border); background:#0b1220; color:#9ca3af}
+    .list{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px}
+    .hr{height:1px;background:var(--border); margin:10px 0}
+    .side{display:grid; grid-template-columns: 2.4fr 1fr; gap:12px;}
+    @media (max-width: 980px){ .side{grid-template-columns:1fr;} .list{grid-template-columns:1fr} }
+    .mini{font-size:12px; color:#9ca3af}
+    .scroll{max-height:300px; overflow:auto; border:1px solid var(--border); border-radius:12px; padding:8px; background:#0b1220;}
+  </style>
+</head>
+<body>
+<header>
+    <h1>Inventario de Dispositivos</h1>
+    <div class="tabs">
+        <div class="tab active" data-tab="equipos">Equipos (CRUD)</div>
+        <div class="tab" data-tab="responsivas">Responsivas</div>
+    </div>
+    <div class="right chip" id="statusChip">Listo</div>
+</header>
+
+<main>
+    <!-- ====== TAB CRUD EQUIPOS ====== -->
+    <section id="tab-equipos">
+        <div class="card">
+            <div class="row">
+                <div style="min-width:220px; flex:1">
+                    <label>Tipo</label>
+                    <select id="eTipo"></select>
+                </div>
+                <div style="min-width:220px; flex:1">
+                    <label>Búsqueda (marca, modelo, serie)</label>
+                    <input id="eQ" placeholder="Buscar..." />
+                </div>
+                <button id="btnBuscarE" class="info">Buscar</button>
+                <button id="btnNuevo" class="primary right">Nuevo</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <table>
+                <thead>
+                <tr>
+                    <th style="width:70px">Acciones</th>
+                    <th>Tipo</th><th>ID</th><th>Marca</th><th>Modelo</th><th>N° Serie</th><th>Estado</th>
+                    <th>Área</th><th>Depto</th><th>Resp.</th><th>Puesto</th>
+                </tr>
+                </thead>
+                <tbody id="eTBody"></tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h3 style="margin:0 0 10px 0">Formulario</h3>
+            <div class="grid-4">
+                <div><label>ID (solo edición)</label><input id="fId" disabled></div>
+                <div><label>Tipo</label><select id="fTipo"></select></div>
+                <div><label>Marca</label><input id="fMarca"></div>
+                <div><label>Modelo</label><input id="fModelo"></div>
+
+                <div><label>Número de Serie</label><input id="fSerie"></div>
+                <div><label>Estado</label><input id="fEstado" placeholder="BUENO / REGULAR / ..."></div>
+                <div><label>Área</label><input id="fArea"></div>
+                <div><label>Departamento</label><input id="fDepto"></div>
+
+                <div><label>Responsable</label><input id="fResp"></div>
+                <div><label>Puesto</label><input id="fPuesto"></div>
+            </div>
+            <div class="row" style="margin-top:10px">
+                <button id="btnGuardar" class="primary">Guardar</button>
+                <button id="btnEliminar" class="danger">Eliminar</button>
+                <button id="btnLimpiar">Limpiar</button>
+                <div class="right">
+                    <span class="muted">QR:</span>
+                    <button id="btnQR" class="qr-btn">Abrir QR del registro actual</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ====== TAB RESPONSIVAS ====== -->
+    <section id="tab-responsivas" class="hide">
+        <div class="card side">
+            <!-- Izquierda: búsqueda y selección -->
+            <div>
+                <div class="row">
+                    <div style="min-width:220px; flex:1">
+                        <label>Filtrar tipo</label>
+                        <select id="rTipo"></select>
+                    </div>
+                    <div style="min-width:220px; flex:1">
+                        <label>Búsqueda</label>
+                        <input id="rQ" placeholder="marca, modelo o serie" />
+                    </div>
+                    <button id="btnBuscarR" class="info">Buscar</button>
+                    <div class="right chip"><span id="rCount">0</span> seleccionados</div>
+                </div>
+
+                <div class="card" style="margin:10px 0 0 0">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th style="width:48px"><input type="checkbox" id="rAll"></th>
+                            <th>Tipo</th><th>ID</th><th>Marca</th><th>Modelo</th><th>N° Serie</th><th>Estado</th>
+                        </tr>
+                        </thead>
+                        <tbody id="rTBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Derecha: carrito + metadatos -->
+            <div>
+                <div class="card">
+                    <h3 style="margin:0 0 8px 0">Carrito (selección)</h3>
+                    <div id="cartBox" class="scroll mini">Sin selección</div>
+                    <div class="hr"></div>
+                    <h3 style="margin:0 0 8px 0">Datos de la Responsiva</h3>
+                    <div class="grid-2">
+                        <div><label>Nombre archivo (.docx)</label><input id="rvNombre" placeholder="JUAN_PEREZ.docx"></div>
+                        <div><label>Fecha</label><input id="rvFecha" type="date"></div>
+
+                        <div><label>Persona</label><input id="rvPersona"></div>
+                        <div><label>Área</label><input id="rvArea"></div>
+
+                        <div><label>Puesto</label><input id="rvPuesto" placeholder="(opcional)"></div>
+                        <div><label>Departamento</label><input id="rvDepto"></div>
+
+                        <div><label>Clave</label><input id="rvClave" placeholder="(opcional)"></div>
+                    </div>
+
+                    <div class="row" style="margin-top:10px">
+                        <button id="btnCrearResp" class="primary">Crear (con lote)</button>
+                        <button id="btnAgregarLote" class="info">Agregar lote a EXISTENTE</button>
+                        <button id="btnGuardarMeta">Guardar metadatos</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="row" style="align-items:center">
+                <h3 style="margin:0">Responsivas existentes</h3>
+                <div class="right" style="display:flex; gap:8px; align-items:flex-end">
+                    <div>
+                        <label>Buscar responsiva</label>
+                        <input id="respSearch" placeholder="Filtrar por nombre..." />
+                    </div>
+                    <button id="btnRefResp">Actualizar lista</button>
+                </div>
+            </div>
+            <div id="respList" class="list" style="margin-top:10px"></div>
+        </div>
+    </section>
+</main>
+
+<script>
+/* ===================== configuración básica ===================== */
+const API_EQUIPOS_UNI     = '/api/equipos/unificado';
+const API_EQUIPOS_BASE    = '/api/equipos'; // CRUD: /{tipo}...
+const API_RESP_CREAR_LOTE = '/api/responsivas/crear-con-items';
+const API_RESP_ADD_LOTE   = '/api/responsivas/agregar-multiples';
+const API_RESP_METADATOS  = '/api/responsivas/metadatos';
+const API_RESP_LIST       = '/api/responsivas';
+const API_RESP_DESCARGAR  = '/api/responsivas/descargar?nombreArchivo=';
+
+const TIPOS = [
+  'pantallas','cctv','accesorios','multifuncionales_impresoras',
+  'nas_server_pc_laptops','radio','switch_aps','tablets',
+  'telefonos','terminales_pv','ups_regulador_nobreak'
+];
+
+/* ======= utilidades ======= */
+const $ = q => document.querySelector(q);
+const chip = $('#statusChip');
+function setStatus(msg){ chip.textContent = msg; }
+function toast(msg){ setStatus(msg); }
+async function fetchJSON(url, opts={}){
+  const r = await fetch(url, opts);
+  let j=null; try{ j = await r.json(); }catch(_){}
+  if(!r.ok){ throw new Error((j && (j.error||j.message)) || r.statusText); }
+  return j;
+}
+function fillSelect(el, arr, withEmpty=false){
+  el.innerHTML = '';
+  if (withEmpty){ el.appendChild(new Option('(todos)','')); }
+  arr.forEach(x=> el.appendChild(new Option(x,x)));
+}
+
+/* ======= tabs ======= */
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(a=>a.classList.remove('active'));
+    t.classList.add('active');
+    const id = t.dataset.tab;
+    $('#tab-equipos').classList.toggle('hide', id!=='equipos');
+    $('#tab-responsivas').classList.toggle('hide', id!=='responsivas');
+  });
+});
+
+/* ===================== CRUD EQUIPOS ===================== */
+const eTipo = $('#eTipo'), eQ = $('#eQ'), eTBody = $('#eTBody');
+const fId = $('#fId'), fTipo = $('#fTipo'), fMarca = $('#fMarca'), fModelo = $('#fModelo'),
+      fSerie = $('#fSerie'), fEstado = $('#fEstado'), fArea = $('#fArea'),
+      fDepto = $('#fDepto'), fResp = $('#fResp'), fPuesto = $('#fPuesto');
+
+fillSelect(eTipo, TIPOS, true);
+fillSelect(fTipo, TIPOS, false);
+
+$('#btnBuscarE').addEventListener('click', cargarEquipos);
+$('#btnNuevo').addEventListener('click', limpiarForm);
+$('#btnGuardar').addEventListener('click', guardarEquipo);
+$('#btnEliminar').addEventListener('click', eliminarEquipo);
+$('#btnLimpiar').addEventListener('click', limpiarForm);
+$('#btnQR').addEventListener('click', abrirQRActual);
+
+async function cargarEquipos(){
+  try{
+    setStatus('Cargando...');
+    const params = new URLSearchParams();
+    if (eTipo.value) params.set('tipo', eTipo.value);
+    if (eQ.value.trim()) params.set('q', eQ.value.trim());
+    const data = await fetchJSON(`${API_EQUIPOS_UNI}?${params.toString()}`);
+    renderListadoEquipos(data);
+    toast(`Cargados ${data.length} registros`);
+  }catch(err){ toast('Error: '+err.message); }
+}
+
+function renderListadoEquipos(arr){
+  eTBody.innerHTML = '';
+  arr.forEach(r=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>
+        <button class="qr-btn" data-qr="${r.tipo}|${r.id}">QR</button>
+        <button class="qr-btn" data-edit="${r.tipo}|${r.id}">Editar</button>
+      </td>
+      <td>${r.tipo??''}</td>
+      <td>${r.id??''}</td>
+      <td>${r.marca??''}</td>
+      <td>${r.modelo??''}</td>
+      <td>${r.numeroDeSerie??''}</td>
+      <td>${r.estado??''}</td>
+      <td>${r.area??''}</td>
+      <td>${r.departamento??''}</td>
+      <td>${r.responsable??''}</td>
+      <td>${r.puesto??''}</td>
+    `;
+    eTBody.appendChild(tr);
+  });
+
+  eTBody.querySelectorAll('[data-qr]').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const [tipo,id] = b.dataset.qr.split('|');
+      window.open(`${API_EQUIPOS_BASE}/${encodeURIComponent(tipo)}/${id}/qr`, '_blank');
+    });
+  });
+  eTBody.querySelectorAll('[data-edit]').forEach(b=>{
+    b.addEventListener('click', async ()=>{
+      const [tipo,id] = b.dataset.edit.split('|');
+      try{
+        const d = await fetchJSON(`${API_EQUIPOS_BASE}/${encodeURIComponent(tipo)}/${id}`);
+        fId.value = d.id ?? '';
+        fTipo.value = tipo;
+        fMarca.value = d.marca ?? '';
+        fModelo.value = d.modelo ?? '';
+        fSerie.value = d.numeroDeSerie ?? '';
+        fEstado.value = d.estado ?? '';
+        fArea.value = d.area ?? '';
+        fDepto.value = d.departamento ?? '';
+        fResp.value = d.responsable ?? '';
+        fPuesto.value = d.puesto ?? '';
+        toast(`Editando ${tipo} #${id}`);
+      }catch(err){ toast('Error: '+err.message); }
+    });
+  });
+}
+
+function limpiarForm(){
+  [fId,fMarca,fModelo,fSerie,fEstado,fArea,fDepto,fResp,fPuesto].forEach(x=>x.value='');
+  fTipo.value = TIPOS[0];
+  toast('Formulario limpio');
+}
+
+async function guardarEquipo(){
+  const tipo = fTipo.value;
+  const dto = {
+    marca: fMarca.value.trim(),
+    modelo: fModelo.value.trim(),
+    numeroDeSerie: fSerie.value.trim(),
+    estado: fEstado.value.trim(),
+    area: fArea.value.trim(),
+    departamento: fDepto.value.trim(),
+    responsable: fResp.value.trim(),
+    puesto: fPuesto.value.trim()
+  };
+  try{
+    if (fId.value){
+      const id = Number(fId.value);
+      await fetchJSON(`${API_EQUIPOS_BASE}/${encodeURIComponent(tipo)}/${id}`, {
+        method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(dto)
+      });
+      toast('Actualizado');
+    }else{
+      const res = await fetchJSON(`${API_EQUIPOS_BASE}/${encodeURIComponent(tipo)}`, {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(dto)
+      });
+      toast('Creado');
+      fId.value = res.id ?? '';
+    }
+    await cargarEquipos();
+  }catch(err){ toast('Error: '+err.message); }
+}
+
+async function eliminarEquipo(){
+  if (!fId.value){ toast('No hay registro cargado'); return; }
+  if (!confirm('¿Eliminar este registro?')) return;
+  const tipo = fTipo.value, id = Number(fId.value);
+  try{
+    await fetchJSON(`${API_EQUIPOS_BASE}/${encodeURIComponent(tipo)}/${id}`, { method:'DELETE' });
+    toast('Eliminado');
+    limpiarForm();
+    await cargarEquipos();
+  }catch(err){ toast('Error: '+err.message); }
+}
+
+function abrirQRActual(){
+  if (!fId.value){ toast('Carga un registro primero'); return; }
+  const tipo = fTipo.value, id = Number(fId.value);
+  window.open(`${API_EQUIPOS_BASE}/${encodeURIComponent(tipo)}/${id}/qr`, '_blank');
+}
+
+/* ===================== RESPONSIVAS ===================== */
+const rTipo   = $('#rTipo'), rQ = $('#rQ'), rTBody = $('#rTBody'), rAll = $('#rAll'), rCount = $('#rCount');
+fillSelect(rTipo, TIPOS, true);
+
+const seleccion = new Set(); // "tipo|id"
+let allResp = []; // lista completa para filtro
+const cartBox = $('#cartBox');
+
+$('#btnBuscarR').addEventListener('click', cargarEquiposResp);
+$('#btnCrearResp').addEventListener('click', crearResponsiva);
+$('#btnAgregarLote').addEventListener('click', agregarLoteAExistente);
+$('#btnGuardarMeta').addEventListener('click', guardarMetadatos);
+$('#btnRefResp').addEventListener('click', listarResponsivas);
+$('#respSearch').addEventListener('input', filtrarResponsivas);
+rAll.addEventListener('change', ()=>{
+  rTBody.querySelectorAll('input[type=checkbox]').forEach(ch=>{
+    ch.checked = rAll.checked;
+    const key = ch.dataset.k;
+    if (ch.checked) seleccion.add(key); else seleccion.delete(key);
+  });
+  actualizarContador();
+  renderCarrito();
+});
+
+async function cargarEquiposResp(){
+  try{
+    setStatus('Buscando equipos…');
+    const params = new URLSearchParams();
+    if (rTipo.value) params.set('tipo', rTipo.value);
+    if (rQ.value.trim()) params.set('q', rQ.value.trim());
+    const data = await fetchJSON(`${API_EQUIPOS_UNI}?${params.toString()}`);
+    renderRespListado(data);
+    toast(`Resultados: ${data.length}`);
+  }catch(err){ toast('Error: '+err.message); }
+}
+
+function renderRespListado(arr){
+  rTBody.innerHTML = '';
+  arr.forEach(r=>{
+    const key = `${r.tipo}|${r.id}`;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="checkbox" data-k="${key}" ${seleccion.has(key)?'checked':''}></td>
+      <td>${r.tipo??''}</td>
+      <td>${r.id??''}</td>
+      <td>${r.marca??''}</td>
+      <td>${r.modelo??''}</td>
+      <td>${r.numeroDeSerie??''}</td>
+      <td>${r.estado??''}</td>
+    `;
+    rTBody.appendChild(tr);
+  });
+  rTBody.querySelectorAll('input[type=checkbox]').forEach(ch=>{
+    ch.addEventListener('change', ()=>{
+      const k = ch.dataset.k;
+      if (ch.checked) seleccion.add(k); else seleccion.delete(k);
+      actualizarContador();
+      renderCarrito();
+    });
+  });
+  actualizarContador();
+  renderCarrito();
+}
+
+function actualizarContador(){ rCount.textContent = seleccion.size; }
+
+function renderCarrito(){
+  if (seleccion.size === 0){ cartBox.innerHTML = 'Sin selección'; return; }
+  cartBox.innerHTML = '';
+  seleccion.forEach(k=>{
+    const div = document.createElement('div');
+    const [tipo,id] = k.split('|');
+    div.textContent = `${tipo} #${id}`;
+    cartBox.appendChild(div);
+  });
+}
+
+function selectedItemsArray(){
+  return Array.from(seleccion).map(k=>{
+    const [tipo,id] = k.split('|'); return {tipo, id:Number(id)};
+  });
+}
+
+async function crearResponsiva(){
+  if (seleccion.size === 0){ toast('Selecciona al menos un equipo'); return; }
+  const body = {
+  nombreResponsiva: $('#rvNombre').value.trim() || null,
+  crearNueva: true,
+  persona: $('#rvPersona').value.trim() || null,
+  area: $('#rvArea').value.trim() || null,
+  departamento: $('#rvDepto').value.trim() || null,
+
+  // <<< NUEVO / ya soportado por tu backend >>>
+  puesto: $('#rvPuesto').value.trim() || null,
+  fecha: $('#rvFecha').value || "",     // input type="date" → "YYYY-MM-DD"
+
+  // opcional extra que ya manejas
+  clave: $('#rvClave').value.trim() || null,
+
+  items: selectedItemsArray()
+};
+
+  try{
+    const res = await fetchJSON(API_RESP_CREAR_LOTE, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
+    });
+    toast(`Responsiva OK · agregados: ${res.agregados}`);
+    seleccion.clear(); actualizarContador(); renderCarrito();
+    await listarResponsivas();
+  }catch(err){ toast('Error: '+err.message); }
+}
+
+async function agregarLoteAExistente(){
+  if (seleccion.size === 0){ toast('Selecciona al menos un equipo'); return; }
+  const nombre = $('#rvNombre').value.trim();
+  if (!nombre){ toast('Indica el nombre de la responsiva existente'); return; }
+  const body = {
+    nombreResponsiva: nombre,
+    crearNueva: false,
+    items: selectedItemsArray()
+  };
+  try{
+    const res = await fetchJSON(API_RESP_ADD_LOTE, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
+    });
+    toast(`Agregados: ${res.agregados}`);
+    await listarResponsivas();
+  }catch(err){ toast('Error: '+err.message); }
+}
+
+async function guardarMetadatos(){
+const body = {
+  nombreResponsiva: $('#rvNombre').value.trim(),
+  persona: $('#rvPersona').value.trim(),
+  area: $('#rvArea').value.trim(),
+  departamento: $('#rvDepto').value.trim(),
+
+  // <<< NUEVO / ya soportado por tu backend >>>
+  puesto: $('#rvPuesto').value.trim(),
+  fecha: $('#rvFecha').value || "",
+
+  // si usas clave
+  clave: $('#rvClave').value.trim()
+};
+
+  if (!body.nombreResponsiva){ toast('Indica el nombre del archivo'); return; }
+  try{
+    await fetchJSON(API_RESP_METADATOS, {
+      method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
+    });
+    toast('Metadatos guardados');
+  }catch(err){ toast('Error: '+err.message); }
+}
+
+/* ===== Responsivas: listado y filtro ===== */
+let respCache = [];
+async function listarResponsivas(){
+  try{
+    respCache = await fetchJSON(API_RESP_LIST);
+    allResp = respCache.slice(0);
+    renderRespList(respCache);
+  }catch(err){ toast('Error: '+err.message); }
+}
+function renderRespList(arr){
+  const box = $('#respList');
+  box.innerHTML = '';
+  if (!arr.length){ box.innerHTML = `<div class="muted">No hay responsivas</div>`; return; }
+  arr.forEach(name=>{
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="row" style="align-items:center">
+        <div><span class="pill">DOCX</span> <b style="margin-left:8px">${name}</b></div>
+        <a class="right" href="${API_RESP_DESCARGAR + encodeURIComponent(name)}" download>Descargar</a>
+      </div>
+    `;
+    box.appendChild(card);
+  });
+}
+function filtrarResponsivas(){
+  const q = $('#respSearch').value.toLowerCase();
+  const filtered = allResp.filter(n => n.toLowerCase().includes(q));
+  renderRespList(filtered);
+}
+
+/* ===== inicio ===== */
+(async function init(){
+  fillSelect(rTipo, TIPOS, true);
+  await cargarEquipos();     // arranque CRUD
+  await cargarEquiposResp(); // arranque Responsivas
+  await listarResponsivas();
+})();
+</script>
+</body>
+</html>
