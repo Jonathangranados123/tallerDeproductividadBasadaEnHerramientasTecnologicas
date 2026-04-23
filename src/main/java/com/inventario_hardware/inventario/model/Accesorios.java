@@ -1,5 +1,5 @@
 package com.inventario_hardware.inventario.model;
-
+//hola 
 import jakarta.persistence.*;
 
 @Entity
