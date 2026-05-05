@@ -24,7 +24,6 @@ El inventario gestionado en hojas de cálculo y registros manuales provoca **inc
 - Generación/lectura de códigos QR/barcode y generación de PDFs como servicios del backend.
 - Integración de proyecto con tablero (Zube) e integración continua (Travis CI).
 
-> Diagrama: ver [`docs/arquitectura.png`](docs/arquitectura.png)
 
 ---
 
@@ -93,5 +92,5 @@ El inventario gestionado en hojas de cálculo y registros manuales provoca **inc
 
 ### 1) Clonar repositorio
 ```bash
-git clone https://github.com/<org>/<repo>.git
-cd <repo>
+git clone https://github.com/Jonathangranados123/tallerDeproductividadBasadaEnHerramientasTecnologicas.git
+
